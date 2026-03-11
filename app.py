@@ -201,7 +201,7 @@ def _stepper(current: int):
 
 # ─── Helper: preview table ───────────────────────────────────────────────────────
 def _preview(df: pd.DataFrame, n: int = 5):
-    st.dataframe(df.head(n), use_container_width=True, hide_index=True)
+    st.dataframe(df.head(n), width="stretch", hide_index=True)
 
 
 # ─── Helper: build flat results df ──────────────────────────────────────────────
@@ -241,13 +241,38 @@ def _build_results_df(results: list[dict]) -> pd.DataFrame:
 
 # ─── Helper: style results df ───────────────────────────────────────────────────
 def _style_results(df: pd.DataFrame) -> pd.io.formats.style.Styler:
+    import math
+
+    # Keep raw numeric scores for row colouring before we convert to strings.
+    raw_scores: pd.Series = pd.Series(dtype=object)
+    if "Score" in df.columns:
+        raw_scores = df["Score"].reset_index(drop=True)
+
+    # Work on a display copy where Score is already a formatted string.
+    # This completely avoids the Styler .format() path and any NaN-to-int crash.
+    disp = df.copy().reset_index(drop=True)
+    if "Score" in disp.columns:
+
+        def _fmt(v):
+            try:
+                if v is None or v == "":
+                    return ""
+                fv = float(v)
+                return "" if math.isnan(fv) else f"{int(fv)}%"
+            except (TypeError, ValueError):
+                return str(v) if v is not None else ""
+
+        disp["Score"] = disp["Score"].apply(_fmt)
+
     def row_color(row):
         try:
-            score = row.get("Score")
-            if score is None or score == "" or pd.isna(score):
-                return ["background-color: #f9fafb"] * len(row)
-            s = float(score)
-        except (TypeError, ValueError):
+            raw = raw_scores.iat[row.name]
+            if raw is None or raw == "":
+                raise ValueError
+            s = float(raw)
+            if math.isnan(s):
+                raise ValueError
+        except (TypeError, ValueError, IndexError):
             return ["background-color: #f9fafb"] * len(row)
         if s >= 90:
             bg = "#f0fdf4"
@@ -257,18 +282,7 @@ def _style_results(df: pd.DataFrame) -> pd.io.formats.style.Styler:
             bg = "#fff1f2"
         return [f"background-color: {bg}"] * len(row)
 
-    def fmt_score(val):
-        try:
-            if val is None or val == "" or pd.isna(val):
-                return ""
-            return f"{int(float(val))}%"
-        except (TypeError, ValueError):
-            return str(val) if val is not None else ""
-
-    styled = df.style.apply(row_color, axis=1)
-    if "Score" in df.columns:
-        styled = styled.format({"Score": fmt_score})
-    return styled
+    return disp.style.apply(row_color, axis=1)
 
 
 # ─── APP HEADER ──────────────────────────────────────────────────────────────────
@@ -678,4 +692,4 @@ elif ss.step == 5 and ss.results is not None:
 
     df = _build_results_df(results)
     styled = _style_results(df)
-    st.dataframe(styled, use_container_width=True, height=600, hide_index=True)
+    st.dataframe(styled, width="stretch", height=600, hide_index=True)
