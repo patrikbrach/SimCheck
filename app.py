@@ -690,6 +690,54 @@ elif ss.step == 5 and ss.results is not None:
         unsafe_allow_html=True,
     )
 
+    tab_all, tab_new = st.tabs(["All matches", "Potential new clients"])
+
     df = _build_results_df(results)
-    styled = _style_results(df)
-    st.dataframe(styled, width="stretch", height=600, hide_index=True)
+
+    with tab_all:
+        styled = _style_results(df)
+        st.dataframe(styled, width="stretch", height=600, hide_index=True)
+
+    # ── Potential new clients ──────────────────────────────────────────────────
+    with tab_new:
+        threshold = st.slider(
+            "Consider 'not in Salesforce' when best match score is below",
+            min_value=50, max_value=95, value=80, step=5,
+            format="%d%%",
+            help="Clients whose top candidate scores below this threshold appear in the list.",
+        )
+
+        new_rows = []
+        input_cols = list(results[0]["input"].keys()) if results else []
+        for item in results:
+            candidates = item.get("candidates", [])
+            best_score = candidates[0]["score"] if candidates else None
+            if best_score is None or best_score < threshold:
+                best = candidates[0] if candidates else {}
+                new_rows.append({
+                    **item["input"],
+                    "Best Match Score": f"{best_score:.1f}%" if best_score is not None else "—",
+                    "Best SF Match": best.get("account_name", ""),
+                    "Best SF City": best.get("city", ""),
+                })
+
+        if new_rows:
+            new_df = pd.DataFrame(new_rows)
+            st.markdown(
+                f"**{len(new_rows)} client(s)** with best match score below **{threshold}%** "
+                f"— likely not in Salesforce."
+            )
+            st.dataframe(new_df, width="stretch", hide_index=True)
+
+            # Download just the new-clients list
+            buf = io.BytesIO()
+            with pd.ExcelWriter(buf, engine="openpyxl") as w:
+                new_df.to_excel(w, index=False, sheet_name="Potential new clients")
+            st.download_button(
+                label="📥  Export potential new clients",
+                data=buf.getvalue(),
+                file_name="potential_new_clients.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        else:
+            st.success(f"All clients have a match ≥ {threshold}% — none flagged as new.")
