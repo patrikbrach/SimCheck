@@ -9,7 +9,7 @@ from utils import export_results_to_excel, read_file_to_df, validate_salesforce_
 
 # ─── Page config ─────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="STIM Client Matcher",
+    page_title="Client Matcher",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -43,7 +43,7 @@ st.markdown(
         display: flex; align-items: center; justify-content: center;
         font-size: 1.2rem;
     }
-    .app-title { font-size: 1.1rem; font-weight: 700; color: #111827; margin: 0; }
+    .app-title { font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0; }
     .app-subtitle { font-size: 0.75rem; color: #9ca3af; margin: 0; }
 
     /* Stepper */
@@ -292,7 +292,7 @@ with hcol1:
         <div class="app-header">
           <div class="app-logo">🔍</div>
           <div>
-            <p class="app-title">STIM Client Matcher</p>
+            <p class="app-title">Client Matcher</p>
             <p class="app-subtitle">Salesforce record matching tool</p>
           </div>
         </div>
@@ -401,6 +401,7 @@ elif ss.step == 2:
     st.markdown(
         '<div class="section-card">'
         '<p class="section-title">Upload Salesforce export</p>'
+        '<p class="section-sub">Use report <strong>"Kundstock STIM"</strong> and export to Xlsx file. You may need to open it and resave it again.</p>'
         '<p class="section-sub">Required columns: Organisation Number · Account Name · Primary City · Status</p>'
         "</div>",
         unsafe_allow_html=True,
