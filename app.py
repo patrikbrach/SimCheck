@@ -242,10 +242,13 @@ def _build_results_df(results: list[dict]) -> pd.DataFrame:
 # ─── Helper: style results df ───────────────────────────────────────────────────
 def _style_results(df: pd.DataFrame) -> pd.io.formats.style.Styler:
     def row_color(row):
-        score = row.get("Score")
-        if score is None or score == "":
+        try:
+            score = row.get("Score")
+            if score is None or score == "" or pd.isna(score):
+                return ["background-color: #f9fafb"] * len(row)
+            s = float(score)
+        except (TypeError, ValueError):
             return ["background-color: #f9fafb"] * len(row)
-        s = float(score)
         if s >= 90:
             bg = "#f0fdf4"
         elif s >= 70:
@@ -255,9 +258,12 @@ def _style_results(df: pd.DataFrame) -> pd.io.formats.style.Styler:
         return [f"background-color: {bg}"] * len(row)
 
     def fmt_score(val):
-        if val is None or val == "":
-            return ""
-        return f"{int(val)}%"
+        try:
+            if val is None or val == "" or pd.isna(val):
+                return ""
+            return f"{int(float(val))}%"
+        except (TypeError, ValueError):
+            return str(val) if val is not None else ""
 
     styled = df.style.apply(row_color, axis=1)
     if "Score" in df.columns:
