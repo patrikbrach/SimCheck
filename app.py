@@ -205,15 +205,15 @@ def _preview(df: pd.DataFrame, n: int = 5):
 
 
 # ─── Helper: build flat results df ──────────────────────────────────────────────
-def _build_results_df(results: list[dict]) -> pd.DataFrame:
+def _build_results_df(results: list[dict], best_only: bool = False) -> pd.DataFrame:
     rows = []
     for item in results:
         candidates = item.get("candidates", [])
-        if not candidates:
+        top = candidates[:1] if best_only else candidates
+        if not top:
             rows.append(
                 {
                     **item["input"],
-                    "Rank": "",
                     "Score": None,
                     "Method": "",
                     "SF Organisation Number": "",
@@ -223,11 +223,10 @@ def _build_results_df(results: list[dict]) -> pd.DataFrame:
                 }
             )
         else:
-            for rank, cand in enumerate(candidates, 1):
+            for cand in top:
                 rows.append(
                     {
                         **item["input"],
-                        "Rank": rank,
                         "Score": cand["score"],
                         "Method": cand["method"],
                         "SF Organisation Number": cand["org_nr"],
@@ -692,7 +691,7 @@ elif ss.step == 5 and ss.results is not None:
 
     tab_all, tab_new = st.tabs(["All matches", "Potential new clients"])
 
-    df = _build_results_df(results)
+    df = _build_results_df(results, best_only=True)
 
     with tab_all:
         styled = _style_results(df)
